@@ -7,7 +7,7 @@ import (
 
 	tele "gopkg.in/telebot.v3"
 
-	"artTgBot/internal"
+	artInfo "artTgBot/internal/info"
 )
 
 func main() {
@@ -22,30 +22,11 @@ func main() {
 		return
 	}
 
-	var (
-		// Universal markup builders.
-		menu = &tele.ReplyMarkup{ResizeKeyboard: true}
+	// Info handling
+	infoHandler := artInfo.NewHandler(b)
+	b.Handle("/start", infoHandler.HandleStart)
 
-		// Reply buttons.
-		btnHelp     = menu.Text("ℹ Help")
-		btnSettings = menu.Text("⚙ Settings")
-	)
-
-	// Filling the keyboard
-	menu.Reply(
-		menu.Row(btnHelp),
-		menu.Row(btnSettings),
-	)
-
-	// Creating the handler obj
-	handler := internal.NewHandler(menu)
-
-	b.Handle("/start", handler.StartHandler)
-
-	// On reply button pressed (message)
-	b.Handle(&btnHelp, func(c tele.Context) error {
-		return c.Send("Пошел нахуй пидор ебынй")
-	})
+	// Orders handling
 
 	b.Start()
 }
