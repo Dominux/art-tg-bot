@@ -8,6 +8,8 @@ import (
 	tele "gopkg.in/telebot.v3"
 
 	artInfo "artTgBot/internal/apps/info"
+	artOrders "artTgBot/internal/apps/orders"
+	"artTgBot/internal/common"
 )
 
 func main() {
@@ -35,7 +37,12 @@ func main() {
 	infoHandler := artInfo.NewHandler(b)
 	b.Handle("/start", infoHandler.HandleStart)
 
+	// Creating admins
+	adminStr := os.Getenv("ADMIN")
+	admin := common.NewAdmin(adminStr)
+
 	// Orders handling
+	orderHandler := artOrders.NewHandler(b, []*common.Admin{admin})
 
 	b.Start()
 }
