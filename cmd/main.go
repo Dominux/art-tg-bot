@@ -9,16 +9,17 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
+	"artTgBot/internal/apps/orders"
 	"artTgBot/internal/common"
 )
 
 var (
-	db *gorm.DB
+	ordersService *orders.OrdersService
+
+	admin *common.Admin
 
 	infoMenu  = &tele.ReplyMarkup{ResizeKeyboard: true}
 	orderMenu = &tele.ReplyMarkup{ResizeKeyboard: true}
-
-	admin *common.Admin
 )
 
 func main() {
@@ -42,13 +43,15 @@ func main() {
 		}
 	}
 
-	// Initing db
+	// Initiating db and services
 	{
 		dbName := os.Getenv("DB_NAME")
-		db, err = common.InitDB(sqlite.Open(dbName), &gorm.Config{})
+		db, err := common.InitDB(sqlite.Open(dbName), &gorm.Config{})
 		if err != nil {
 			panic("failed to connect database")
 		}
+
+		ordersService = orders.NewOrdersService(db)
 	}
 
 	// Creating admins
@@ -72,7 +75,7 @@ func main() {
 		)
 
 		b.Handle(&btnShowExamples, showExamples)
-		b.Handle(&btnCreateOrder, showExamples)
+		b.Handle(&btnCreateOrder, getOrderCreationForm)
 	}
 
 	b.Handle("/start", handleStart)
@@ -82,8 +85,11 @@ func main() {
 		btnCancel := orderMenu.Text("Отмена")
 		orderMenu.Reply(orderMenu.Row(btnCancel))
 
-		b.Handle(&btnCancel, cancerOrderCreation)
+		b.Handle(&btnCancel, cancelOrderCreation)
 	}
+
+	// Handling any text
+	b.Handle(tele.OnText, onText)
 
 	// Starting bot
 	b.Start()
@@ -114,6 +120,23 @@ func getOrderCreationForm(c tele.Context) error {
 	)
 }
 
+func onText(c tele.Context) error {
+	chatID := c.Chat().ID
+
+	// Trying to submit order, if order isn't found - then it's just a user mistake
+	// TODO: delete order after forwarding it only, otherwise order may be lost
+	if err := ordersService.SubmitOrder(chatID); err != nil {
+		return c.Send(
+			`Не понял вас :)
+			Пожалуйста, используйте клавиатуру для навигации`,
+			infoMenu,
+		)
+	}
+
+	// Otherwise - creating order
+	return createOrder(c)
+}
+
 func createOrder(c tele.Context) error {
 	// Creating order
 	// In current app version we just forward message to admin
@@ -123,6 +146,6 @@ func createOrder(c tele.Context) error {
 	return c.Send("Спасибо за заказ", infoMenu)
 }
 
-func cancerOrderCreation(c tele.Context) error {
+func cancelOrderCreation(c tele.Context) error {
 	return c.Send("Вы вернулись в основное меню", infoMenu)
 }
