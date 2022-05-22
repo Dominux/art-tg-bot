@@ -89,6 +89,7 @@ func main() {
 	}
 
 	// Handling any text
+	// TODO: bug with handling only text messages
 	b.Handle(tele.OnText, onText)
 
 	// Starting bot
@@ -113,6 +114,11 @@ func showExamples(c tele.Context) error {
 }
 
 func getOrderCreationForm(c tele.Context) error {
+	chatID := c.Chat().ID
+	if err := ordersService.SaveOrder(chatID); err != nil {
+		return c.Send("Ошибка при создании заказа, повторите попытку позже", infoMenu)
+	}
+
 	return c.Send(
 		`Опишите ваш заказ как можно подробнее
 		По возможности приложите к сообщению ссылку или изображение того, из чего хотите получить Арт`,
@@ -123,9 +129,9 @@ func getOrderCreationForm(c tele.Context) error {
 func onText(c tele.Context) error {
 	chatID := c.Chat().ID
 
-	// Trying to submit order, if order isn't found - then it's just a user mistake
-	// TODO: delete order after forwarding it only, otherwise order may be lost
-	if err := ordersService.SubmitOrder(chatID); err != nil {
+	// Trying to get order, if order isn't found - then it's just a user mistake
+	_, err := ordersService.GetOrder(chatID)
+	if err != nil {
 		return c.Send(
 			`Не понял вас :)
 			Пожалуйста, используйте клавиатуру для навигации`,
@@ -134,13 +140,22 @@ func onText(c tele.Context) error {
 	}
 
 	// Otherwise - creating order
-	return createOrder(c)
+	return createOrder(c, chatID)
 }
 
-func createOrder(c tele.Context) error {
+func createOrder(c tele.Context, chatID int64) error {
 	// Creating order
 	// In current app version we just forward message to admin
-	c.ForwardTo(admin)
+	err := c.ForwardTo(admin)
+
+	// Submitting order
+	// TODO: handle error somehow
+	ordersService.SubmitOrder(chatID)
+
+	// Handling error after submiting order cause otherwise it may cause some wrong behavior
+	if err != nil {
+		return c.Send("Произошла ошибка с обработкой заказа, повторите позже", infoMenu)
+	}
 
 	// Getting user back to main info menu
 	return c.Send("Спасибо за заказ", infoMenu)
