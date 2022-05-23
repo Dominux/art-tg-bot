@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -82,15 +83,43 @@ func main() {
 
 	// Orders handling
 	{
+		btnSubmitOrder := orderMenu.Text("Отправить заказ")
 		btnCancel := orderMenu.Text("Отмена")
-		orderMenu.Reply(orderMenu.Row(btnCancel))
+		orderMenu.Reply(
+			orderMenu.Row(btnSubmitOrder),
+			orderMenu.Row(btnCancel),
+		)
 
+		b.Handle(&btnSubmitOrder, submitOrder)
 		b.Handle(&btnCancel, cancelOrderCreation)
 	}
 
-	// Handling any text
-	// TODO: bug with handling only text messages
-	b.Handle(tele.OnText, onText)
+	// Handling any message content here
+	{
+		hooks := []string{
+			tele.OnText,
+			tele.OnPhoto,
+			tele.OnAudio,
+			tele.OnAnimation,
+			tele.OnDocument,
+			tele.OnSticker,
+			tele.OnVideo,
+			tele.OnVoice,
+			tele.OnVideoNote,
+			tele.OnContact,
+			tele.OnLocation,
+			tele.OnVenue,
+			tele.OnDice,
+			tele.OnInvoice,
+			tele.OnPayment,
+			tele.OnGame,
+			tele.OnPoll,
+			tele.OnPollAnswer,
+		}
+		for _, hook := range hooks {
+			b.Handle(hook, onMessage)
+		}
+	}
 
 	// Starting bot
 	b.Start()
@@ -115,46 +144,67 @@ func showExamples(c tele.Context) error {
 
 func getOrderCreationForm(c tele.Context) error {
 	chatID := c.Chat().ID
-	if err := ordersService.SaveOrder(chatID); err != nil {
+	if err := ordersService.CreateOrder(chatID); err != nil {
 		return c.Send("Ошибка при создании заказа, повторите попытку позже", infoMenu)
 	}
 
 	return c.Send(
 		`Опишите ваш заказ как можно подробнее
-		По возможности приложите к сообщению ссылку или изображение того, из чего хотите получить Арт`,
+По возможности приложите к сообщению ссылку или изображение того, из чего хотите получить Арт`,
 		orderMenu,
 	)
 }
 
-func onText(c tele.Context) error {
+func onMessage(c tele.Context) error {
 	chatID := c.Chat().ID
+	messageID := c.Message().ID
 
-	// Trying to get order, if order isn't found - then it's just a user mistake
-	_, err := ordersService.GetOrder(chatID)
-	if err != nil {
+	// Trying to add detail to order, if order isn't found - then it's just a user mistake
+	if err := ordersService.AddDetail(chatID, messageID); err != nil {
 		return c.Send(
 			`Не понял вас :)
-			Пожалуйста, используйте клавиатуру для навигации`,
+Пожалуйста, используйте клавиатуру для навигации`,
 			infoMenu,
 		)
 	}
 
-	// Otherwise - creating order
-	return createOrder(c, chatID)
+	return nil
 }
 
-func createOrder(c tele.Context, chatID int64) error {
-	// Creating order
-	// In current app version we just forward message to admin
-	err := c.ForwardTo(admin)
+func submitOrder(c tele.Context) error {
+	chatID := c.Chat().ID
 
-	// Submitting order
-	// TODO: handle error somehow
-	ordersService.SubmitOrder(chatID)
+	errMsg := "Произошла ошибка с обработкой заказа, повторите позже"
 
-	// Handling error after submiting order cause otherwise it may cause some wrong behavior
+	// In current app version we just forward messages to admin
+	messagesIDs, err := ordersService.GetOrdersDetails(chatID)
 	if err != nil {
-		return c.Send("Произошла ошибка с обработкой заказа, повторите позже", infoMenu)
+		return c.Send(errMsg, infoMenu)
+	}
+
+	if err := func() error {
+		// TODO: handle error somehow
+		defer ordersService.DeleteOrder(chatID)
+
+		// Notifying admin about new order
+		_, err := c.Bot().Send(admin, fmt.Sprintf("Новый заказ от пользователя @%s", c.Chat().Username))
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+
+		for _, messageID := range messagesIDs {
+			storedMessage := tele.StoredMessage{MessageID: messageID, ChatID: chatID}
+			_, err := c.Bot().Forward(admin, storedMessage)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+		}
+
+		return nil
+	}(); err != nil {
+		return c.Send(errMsg, infoMenu)
 	}
 
 	// Getting user back to main info menu
@@ -162,5 +212,9 @@ func createOrder(c tele.Context, chatID int64) error {
 }
 
 func cancelOrderCreation(c tele.Context) error {
+	chatID := c.Chat().ID
+	// TODO: handle error
+	ordersService.DeleteOrder(chatID)
+
 	return c.Send("Вы вернулись в основное меню", infoMenu)
 }
