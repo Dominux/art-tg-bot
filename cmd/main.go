@@ -114,7 +114,6 @@ func main() {
 			tele.OnPayment,
 			tele.OnGame,
 			tele.OnPoll,
-			tele.OnPollAnswer,
 		}
 		for _, hook := range hooks {
 			b.Handle(hook, onMessage)
