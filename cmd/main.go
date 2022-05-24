@@ -19,9 +19,8 @@ var (
 
 	admin *common.Admin
 
-	infoMenu     = &tele.ReplyMarkup{ResizeKeyboard: true}
-	preOrderMenu = &tele.ReplyMarkup{ResizeKeyboard: true}
-	orderMenu    = &tele.ReplyMarkup{ResizeKeyboard: true}
+	infoMenu  = &tele.ReplyMarkup{ResizeKeyboard: true}
+	orderMenu = &tele.ReplyMarkup{ResizeKeyboard: true}
 )
 
 func main() {
@@ -80,14 +79,6 @@ func main() {
 
 		b.Handle(&btnShowExamples, showExamples)
 		b.Handle(&btnCreateOrder, getOrderCreationForm)
-	}
-
-	// Preorder handling
-	{
-		btnCancel := preOrderMenu.Text("Отмена")
-		preOrderMenu.Reply(orderMenu.Row(btnCancel))
-
-		b.Handle(&btnCancel, cancelOrderCreation)
 	}
 
 	// Orders handling
@@ -159,7 +150,7 @@ func getOrderCreationForm(c tele.Context) error {
 	return c.Send(
 		`Опишите ваш заказ как можно подробнее
 По возможности приложите к сообщению ссылку или изображение того, из чего хотите получить Арт`,
-		preOrderMenu,
+		orderMenu,
 	)
 }
 
@@ -176,7 +167,7 @@ func onMessage(c tele.Context) error {
 		)
 	}
 
-	return c.Send("&#8291;", orderMenu)
+	return nil
 }
 
 func submitOrder(c tele.Context) error {
@@ -188,6 +179,11 @@ func submitOrder(c tele.Context) error {
 	messagesIDs, err := ordersService.GetOrdersDetails(chatID)
 	if err != nil {
 		return c.Send(errMsg, infoMenu)
+	}
+
+	// If there's no messages
+	if len(messagesIDs) == 0 {
+		return c.Send("Вы не можете создать пустой заказ")
 	}
 
 	if err := func() error {
