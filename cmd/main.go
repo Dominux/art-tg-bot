@@ -27,22 +27,22 @@ func main() {
 	// Creating bot
 	var b *tele.Bot
 	var err error
-	switch os.Getenv("MODE") {
-	case "PRODUCTION":
-		panic("Not implemented")
+	// switch os.Getenv("MODE") {
+	// case "PRODUCTION":
+	// 	panic("Not implemented")
 
-	default:
-		pref := tele.Settings{
-			Token:  os.Getenv("API_TOKEN"),
-			Poller: &tele.LongPoller{Timeout: 10 * time.Second},
-		}
-
-		b, err = tele.NewBot(pref)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
+	// default:
+	pref := tele.Settings{
+		Token:  os.Getenv("API_TOKEN"),
+		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
 	}
+
+	b, err = tele.NewBot(pref)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	// }
 
 	// Initiating db and services
 	{
