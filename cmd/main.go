@@ -19,8 +19,9 @@ var (
 
 	admin *common.Admin
 
-	infoMenu  = &tele.ReplyMarkup{ResizeKeyboard: true}
-	orderMenu = &tele.ReplyMarkup{ResizeKeyboard: true}
+	infoMenu     = &tele.ReplyMarkup{ResizeKeyboard: true}
+	preOrderMenu = &tele.ReplyMarkup{ResizeKeyboard: true}
+	orderMenu    = &tele.ReplyMarkup{ResizeKeyboard: true}
 )
 
 func main() {
@@ -61,6 +62,8 @@ func main() {
 		admin = common.NewAdmin(adminStr)
 	}
 
+	b.Handle("/start", handleStart)
+
 	// Info handling
 	{
 		var (
@@ -79,7 +82,13 @@ func main() {
 		b.Handle(&btnCreateOrder, getOrderCreationForm)
 	}
 
-	b.Handle("/start", handleStart)
+	// Preorder handling
+	{
+		btnCancel := preOrderMenu.Text("Отмена")
+		preOrderMenu.Reply(orderMenu.Row(btnCancel))
+
+		b.Handle(&btnCancel, cancelOrderCreation)
+	}
 
 	// Orders handling
 	{
@@ -150,7 +159,7 @@ func getOrderCreationForm(c tele.Context) error {
 	return c.Send(
 		`Опишите ваш заказ как можно подробнее
 По возможности приложите к сообщению ссылку или изображение того, из чего хотите получить Арт`,
-		orderMenu,
+		preOrderMenu,
 	)
 }
 
@@ -167,7 +176,7 @@ func onMessage(c tele.Context) error {
 		)
 	}
 
-	return nil
+	return c.Send("&#8291;", orderMenu)
 }
 
 func submitOrder(c tele.Context) error {
