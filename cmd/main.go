@@ -67,17 +67,29 @@ func main() {
 	{
 		var (
 			// Reply buttons.
-			btnShowExamples = infoMenu.Text("ℹ Примеры paбот")
-			btnCreateOrder  = infoMenu.Text("Заказать работу")
+			btnShowProjects                  = infoMenu.Text("ℹ Примеры paбот")
+			btnShowProjectsWereWeCreatedArts = infoMenu.Text("Проекты, в которые делались арты")
+			btnShowReviews                   = infoMenu.Text("Отзывы")
+			btnShowChats                     = infoMenu.Text("Наши чаты")
+			btnShowPricesAndDeadlines        = infoMenu.Text("Сроки/Стоимость")
+			btnCreateOrder                   = infoMenu.Text("Заказать работу")
 		)
 
 		// Filling the keyboard
 		infoMenu.Reply(
-			infoMenu.Row(btnShowExamples),
+			infoMenu.Row(btnShowProjects),
+			infoMenu.Row(btnShowProjectsWereWeCreatedArts),
+			infoMenu.Row(btnShowReviews),
+			infoMenu.Row(btnShowChats),
+			infoMenu.Row(btnShowPricesAndDeadlines),
 			infoMenu.Row(btnCreateOrder),
 		)
 
-		b.Handle(&btnShowExamples, showExamples)
+		b.Handle(&btnShowProjects, showProjects)
+		b.Handle(&btnShowProjectsWereWeCreatedArts, showProjectsWereWeCreatedArts)
+		b.Handle(&btnShowReviews, showReviews)
+		b.Handle(&btnShowChats, showChats)
+		b.Handle(&btnShowPricesAndDeadlines, showPricesAndDeadlines)
 		b.Handle(&btnCreateOrder, getOrderCreationForm)
 	}
 
@@ -125,21 +137,36 @@ func main() {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// 	Handlers
+// 	Info handlers
 //////////////////////////////////////////////////////////////////////////////
 
 func handleStart(c tele.Context) error {
 	return c.Send("Добро пожаловать!", infoMenu)
 }
 
-func showExamples(c tele.Context) error {
-	if err := c.Send("Lol"); err != nil {
-		return err
-	}
-
-	time.Sleep(2 * time.Second)
-	return c.Send("Какая-то ссылка на арты")
+func showProjects(c tele.Context) error {
+	return c.Send("Какая-то ссылка на проекты")
 }
+
+func showProjectsWereWeCreatedArts(c tele.Context) error {
+	return c.Send("Какая-то ссылка на проекты, которые мы сделали")
+}
+
+func showReviews(c tele.Context) error {
+	return c.Send("Отзывы")
+}
+
+func showChats(c tele.Context) error {
+	return c.Send("Наши чаты")
+}
+
+func showPricesAndDeadlines(c tele.Context) error {
+	return c.Send("Стоимость и срок")
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// 	Order handlers
+//////////////////////////////////////////////////////////////////////////////
 
 func getOrderCreationForm(c tele.Context) error {
 	chatID := c.Chat().ID
